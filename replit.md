@@ -5,6 +5,7 @@ A fitness/activity tracking application imported from Lovable. It is a frontend-
 
 ## Recent Changes
 - 2026-02-20: Imported from Lovable and configured for Replit environment (port 5000, allowed hosts, workflow setup).
+- 2026-02-20: Added GPS-based run tracking, real-time distance/duration updates, and Capacitor Android build configuration.
 
 ## Project Architecture
 - **Framework**: React 18 with TypeScript

@@ -10,9 +10,18 @@ interface DayData {
   activeMinutes: number;
 }
 
+interface RunSession {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  distance: number;
+  duration: number;
+}
+
 interface TrackerData {
   days: Record<string, DayData>;
   stepGoal: number;
+  runs: RunSession[];
 }
 
 function getTodayKey(): string {
@@ -35,9 +44,13 @@ function getWeekKeys(): string[] {
 function loadData(): TrackerData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (!parsed.runs) parsed.runs = [];
+      return parsed;
+    }
   } catch {}
-  return { days: {}, stepGoal: 10000 };
+  return { days: {}, stepGoal: 10000, runs: [] };
 }
 
 function saveData(data: TrackerData) {
@@ -61,6 +74,8 @@ function deriveMetrics(steps: number) {
 
 export function useStepTracker() {
   const [data, setData] = useState<TrackerData>(loadData);
+  const [isTrackingRun, setIsTrackingRun] = useState(false);
+  const [currentRun, setCurrentRun] = useState<RunSession | null>(null);
   const todayKey = getTodayKey();
   const today = getOrCreateDay(data, todayKey);
 
@@ -79,6 +94,29 @@ export function useStepTracker() {
     });
   }, [todayKey]);
 
+  const startRun = useCallback(() => {
+    const newRun: RunSession = {
+      id: crypto.randomUUID(),
+      startTime: Date.now(),
+      distance: 0,
+      duration: 0,
+    };
+    setCurrentRun(newRun);
+    setIsTrackingRun(true);
+  }, []);
+
+  const stopRun = useCallback(() => {
+    if (!currentRun) return;
+    const finalRun = { ...currentRun, endTime: Date.now() };
+    setData((prev) => {
+      const next = { ...prev, runs: [...prev.runs, finalRun] };
+      saveData(next);
+      return next;
+    });
+    setIsTrackingRun(false);
+    setCurrentRun(null);
+  }, [currentRun]);
+
   const setGoal = useCallback((goal: number) => {
     setData((prev) => {
       const next = { ...prev, stepGoal: goal };
@@ -89,6 +127,65 @@ export function useStepTracker() {
 
   const weekKeys = getWeekKeys();
   const weekData = weekKeys.map((key) => data.days[key]?.steps || 0);
+
+  // GPS Tracking for Run
+  useEffect(() => {
+    if (!isTrackingRun) return;
+
+    let watchId: number;
+    let lastPos: GeolocationPosition | null = null;
+
+    const handleSuccess = (position: GeolocationPosition) => {
+      if (lastPos) {
+        const R = 6371; // km
+        const dLat = (position.coords.latitude - lastPos.coords.latitude) * Math.PI / 180;
+        const dLon = (position.coords.longitude - lastPos.coords.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lastPos.coords.latitude * Math.PI / 180) * Math.cos(position.coords.latitude * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+
+        setCurrentRun((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            distance: prev.distance + distance,
+            duration: (Date.now() - prev.startTime) / 1000,
+          };
+        });
+
+        // Also update daily totals
+        setData((prev) => {
+          const next = { ...prev, days: { ...prev.days } };
+          const day = { ...(next.days[todayKey] || { date: todayKey, steps: 0, calories: 0, distanceKm: 0, activeMinutes: 0 }) };
+          day.distanceKm += distance;
+          day.activeMinutes += (Date.now() - (lastPos?.timestamp || Date.now())) / 60000;
+          next.days[todayKey] = day;
+          return next;
+        });
+      }
+      lastPos = position;
+    };
+
+    if ("geolocation" in navigator) {
+      watchId = navigator.geolocation.watchPosition(handleSuccess, (err) => {
+        console.error(err);
+        if (err.code === err.PERMISSION_DENIED) {
+          setIsTrackingRun(false);
+          alert("Location permission is required for run tracking.");
+        }
+      }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+    }
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isTrackingRun, todayKey]);
 
   // Simple accelerometer-based step detection
   useEffect(() => {
@@ -109,7 +206,6 @@ export function useStepTracker() {
       lastMagnitude = magnitude;
     };
 
-    // Request permission on iOS 13+
     if (typeof (DeviceMotionEvent as any).requestPermission === "function") {
       (DeviceMotionEvent as any).requestPermission().then((state: string) => {
         if (state === "granted") {
@@ -134,7 +230,11 @@ export function useStepTracker() {
     },
     stepGoal: data.stepGoal,
     weekData,
+    isTrackingRun,
+    currentRun,
     addSteps,
     setGoal,
+    startRun,
+    stopRun,
   };
 }
