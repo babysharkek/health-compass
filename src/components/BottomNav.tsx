@@ -27,11 +27,11 @@ const BottomNav = () => {
               <Icon
                 size={24}
                 weight={tab.active ? "fill" : "regular"}
-                className={tab.active ? "text-primary glow-green" : "text-muted-foreground"}
+                className={tab.active ? "text-foreground" : "text-muted-foreground"}
               />
               <span
                 className={`text-[10px] font-mono ${
-                  tab.active ? "text-primary glow-green" : "text-muted-foreground"
+                  tab.active ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
                 {tab.label}
@@ -39,8 +39,7 @@ const BottomNav = () => {
               {tab.active && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute -top-1 w-1 h-1 rounded-full bg-primary"
-                  style={{ boxShadow: "0 0 8px hsl(145 100% 50% / 0.6)" }}
+                  className="absolute -top-1 w-1 h-1 rounded-full bg-foreground"
                 />
               )}
             </button>
