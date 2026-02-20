@@ -27,3 +27,8 @@ A fitness/activity tracking application imported from Lovable. It is a frontend-
 - Dev: `npm run dev` (Vite on port 5000)
 - Build: `npx vite build` (outputs to `dist/`)
 - Deployment: Static site (dist folder)
+
+## Android Build
+- Prerequisites: Java (GraalVM/OpenJDK) and Android SDK (not pre-installed on standard Replit environments).
+- Command: `npx cap add android` then `npx cap sync android`.
+- Note: Building the APK requires a full Android SDK environment which may need manual setup in a custom Nix shell or local machine.
