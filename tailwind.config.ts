@@ -51,11 +51,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        phosphor: {
-          green: "hsl(var(--phosphor-glow))",
-          amber: "hsl(var(--phosphor-glow-amber))",
-          cyan: "hsl(var(--phosphor-glow-cyan))",
-          rose: "hsl(var(--phosphor-glow-rose))",
+        ring: {
+          move: "hsl(var(--color-move))",
+          exercise: "hsl(var(--color-exercise))",
+          stand: "hsl(var(--color-stand))",
+          steps: "hsl(var(--color-steps))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
